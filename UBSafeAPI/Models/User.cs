@@ -13,5 +13,8 @@ namespace UBSafeAPI.Models
         public string FirstName { get; set; }
         public int Age { get; set; }
         public Gender Gender { get; set; }
+        public float Rating { get; set; }
+        public Preference Preferences { get; set; }
+        public Location Location { get; set; }
     }
 }

@@ -28,9 +28,9 @@ namespace UBSafeAPI
         public void ConfigureServices(IServiceCollection services)
         {
             //grabs the database context
-            services.AddDbContext<UBSafeContext>(options =>
-                options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection"))
-            );
+            //services.AddDbContext<UBSafeContext>(options =>
+            //    options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection"))
+            //);
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
         }
 

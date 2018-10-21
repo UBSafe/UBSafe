@@ -6,6 +6,10 @@ using Microsoft.AspNetCore.Mvc;
 using UBSafeAPI.Models;
 using UBSafeAPI.Data;
 
+using FireSharp.Config;
+using FireSharp.Interfaces;
+using FireSharp.Response;
+
 namespace UBSafeAPI.Controllers
 {
     [Route("api/[controller]")]
@@ -13,17 +17,33 @@ namespace UBSafeAPI.Controllers
     [Produces("application/json")]
     public class TestController : ControllerBase
     {
-        private readonly UBSafeContext db;
-        public TestController(UBSafeContext _db)
+        IFirebaseConfig config = new FirebaseConfig
         {
-            db = _db; 
-        }
+            AuthSecret = "uieSwdqrzXirqrSoJk55xGitX7dsr85fkaps5Ita",
+            BasePath = "https://ubsafe-a816e.firebaseio.com/"
+        };
+
+        IFirebaseClient client; 
+
+        //private readonly UBSafeContext db;
+        //public TestController(UBSafeContext _db)
+        //{
+        //    db = _db; 
+        //}
         
         // GET api/test
         [HttpGet]
-        public IEnumerable<User> Get()
+        public async Task<List<User>> Get()
         {
-            return db.Users; 
+            client = new FireSharp.FirebaseClient(config);
+            if(client != null)
+            {
+                Console.WriteLine("Connection established.");
+            }
+
+            FirebaseResponse response = await client.GetAsync("Users/");
+            List<User> allUsers = response.ResultAs<List<User>>();
+            return allUsers;
         }
 
         // GET api/test/5
@@ -35,14 +55,45 @@ namespace UBSafeAPI.Controllers
 
         // POST api/test
         [HttpPost]
-        public void Post([FromBody] string value)
+        public async void Post(int userID, int age, string firstName, string lastName, Gender gender)
         {
+            client = new FireSharp.FirebaseClient(config);
+            if(client != null)
+            {
+                Console.WriteLine("Connection established.");
+            }
+
+            var user = new User
+            {
+                UserID = userID,
+                Age = age,
+                FirstName = firstName,
+                LastName = lastName,
+                Gender = gender 
+            };
+            SetResponse response = await client.SetAsync("Users/" + user.UserID, user);
+            User result = response.ResultAs<User>();
+            Console.WriteLine(result);
         }
 
         // PUT api/test/5
         [HttpPut("{id}")]
-        public void Put(int id, [FromBody] string value)
+        public async void Put(int id, string name="", int age=-1, string gender="", int prefMinAge=-1, int prefMaxAge=-1, string prefGender="", float prefProximity=-1)
         {
+            client = new FireSharp.FirebaseClient(config);
+            if(client != null)
+            {
+                Console.WriteLine("Connection established.");
+            }
+
+            FirebaseResponse response = await client.GetAsync("Users/" + id);
+            User oldUser = response.ResultAs<User>();
+
+
+            var user = new User
+            {
+            };
+
         }
 
         // DELETE api/values/5
