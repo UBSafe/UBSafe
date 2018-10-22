@@ -55,7 +55,7 @@ namespace UBSafeAPI.Controllers
 
         // POST api/test
         [HttpPost]
-        public async void Post(int userID, int age, string firstName, string lastName, Gender gender)
+        public async void Post(int age, string name, string gender, int minAgePref, int maxAgePref, /*[FromQuery(Name ="prefGenders")] string[] prefGenders,*/ float prefProximity)
         {
             client = new FireSharp.FirebaseClient(config);
             if(client != null)
@@ -65,13 +65,12 @@ namespace UBSafeAPI.Controllers
 
             var user = new User
             {
-                UserID = userID,
+                UserName = name,
                 Age = age,
-                FirstName = firstName,
-                LastName = lastName,
-                Gender = gender 
+                Gender = gender,
+                Preferences = new Preference { AgeMin = minAgePref, AgeMax = maxAgePref, /*Genders = prefGenders.ToList<string>(),*/ Proximity = prefProximity},
             };
-            SetResponse response = await client.SetAsync("Users/" + user.UserID, user);
+            PushResponse response = await client.PushAsync("Users/", user);
             User result = response.ResultAs<User>();
             Console.WriteLine(result);
         }

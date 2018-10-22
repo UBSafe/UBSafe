@@ -9,7 +9,14 @@ namespace UBSafeAPI.Models
     {
         public int AgeMin { get; set; }
         public int AgeMax { get; set; }
-        public Gender Gender { get; set; }
         public float Proximity { get; set; }
+        public GenderPreferences GenderPreferences { get; set; }
+    }
+
+    public class GenderPreferences
+    {
+        public bool FemaleCompanions { get; set; }
+        public bool MaleCompanions { get; set; }
+        public bool OtherCompanions { get; set; }
     }
 }

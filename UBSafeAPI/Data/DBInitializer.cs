@@ -11,6 +11,7 @@ namespace UBSafeAPI.Data
     {
         public static void Initialize(UBSafeContext context)
         {
+            /*
 
             //look for any users
             if (context.Users.Any())
@@ -29,6 +30,7 @@ namespace UBSafeAPI.Data
             };
             context.Users.AddRange(userList);
             context.SaveChanges();
+            */
         }
     }
 }
