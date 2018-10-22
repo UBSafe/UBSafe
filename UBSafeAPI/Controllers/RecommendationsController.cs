@@ -46,13 +46,13 @@ namespace UBSafeAPI.Controllers
              * Trigger location update in db - we do this before issuing other queries to give the 
              * clients time to update their locations in the db
              */
-            triggerLocationUpdate = client.Update("/", new UpdateTrigger { LocationUpdateTrigger = true } );
+            triggerLocationUpdate = client.Update("/", new UpdateTrigger { LocationUpdateTrigger = false } );
             triggered = triggerLocationUpdate.ResultAs<UpdateTrigger>().LocationUpdateTrigger;
             Console.WriteLine(triggered);
 
             //Get current user's preferences for querying purposes
             curUser = client.Get("Users/" + userID);
-            preferences = curUser.ResultAs<User>().Preferences;
+            //preferences = curUser.ResultAs<User>().Preferences;
 
             /*NOTE: ASSUMES THAT AGEMIN AND AGEMAX ARE DEFINED*/
             //Query/filter by the current user's preferences

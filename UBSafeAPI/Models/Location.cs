@@ -9,5 +9,13 @@ namespace UBSafeAPI.Models
     {
         public float Lat { get; set; }
         public float Lon { get; set; }
+        public DateTime LastUpdated { get; set; }
+
+        public Location(float lat, float lon, DateTime lastUpdated)
+        {
+            this.Lat = lat;
+            this.Lon = lon;
+            this.LastUpdated = lastUpdated;
+        }
     }
 }

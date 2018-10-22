@@ -59,7 +59,7 @@ namespace UBSafeAPI.Controllers
 
         // POST: api/Users
         [HttpPost]
-        public async void Post(int userID, int age, string firstName, string lastName, string gender)
+        public async void Post(string userID, string userName, int age, string gender, float lat, float lon, int prefAgeMin, int prefAgeMax, float prefProximity, bool femaleCompanionsOkay, bool maleCompanionsOkay, bool otherCompanionsOkay)
         {
             client = new FireSharp.FirebaseClient(config);
             if(client != null)
@@ -67,17 +67,15 @@ namespace UBSafeAPI.Controllers
                 Console.WriteLine("Connection established.");
             }
 
-            var user = new User
-            {
-            };
-            SetResponse response = await client.SetAsync("Users/", user);
+            var user = new User(userName, age, gender, lat, lon, prefAgeMin, prefAgeMax, prefProximity, femaleCompanionsOkay, maleCompanionsOkay, otherCompanionsOkay);
+            SetResponse response = await client.SetAsync("Users/" + userID, user);
             User result = response.ResultAs<User>();
             Console.WriteLine(result);
         }
 
         // PUT: api/Users/5
         [HttpPut("{id}")]
-        public async void Put(int id, string name="", int age=-1, string gender="", int prefMinAge=-1, int prefMaxAge=-1, string prefGender="", float prefProximity=-1)
+        public async void Put(string userID, string userName, int age, string gender, float lat, float lon, int prefAgeMin, int prefAgeMax, float prefProximity, bool femaleCompanionsOkay, bool maleCompanionsOkay, bool otherCompanionsOkay)
         {
             client = new FireSharp.FirebaseClient(config);
             if(client != null)
@@ -85,13 +83,10 @@ namespace UBSafeAPI.Controllers
                 Console.WriteLine("Connection established.");
             }
 
-            FirebaseResponse response = await client.GetAsync("Users/" + id);
+            FirebaseResponse response = await client.GetAsync("Users/" + userID);
             User oldUser = response.ResultAs<User>();
 
-            var user = new User
-            {
-
-            };
+            var user = new User(userName, age, gender, lat, lon, prefAgeMin, prefAgeMax, prefProximity, femaleCompanionsOkay, maleCompanionsOkay, otherCompanionsOkay);
         }
 
         // DELETE: api/ApiWithActions/5

@@ -63,17 +63,17 @@ namespace UBSafeAPI.Controllers
                 Console.WriteLine("Connection established.");
             }
 
-            var user = new User
-            {
-                UserName = name,
-                Age = age,
-                Gender = gender,
-                Preferences = new Preference { AgeMin = minAgePref, AgeMax = maxAgePref, /*Genders = prefGenders.ToList<string>(),*/ Proximity = prefProximity},
-            };
-            PushResponse response = await client.PushAsync("Users/", user);
-            User result = response.ResultAs<User>();
-            Console.WriteLine(result);
-        }
+            //var user = new User
+            //{
+                //UserName = name,
+                //Age = age,
+                //Gender = gender,
+                //Preferences = new Preference(minAgePref, maxAgePref, prefProximity),
+            //};
+            //PushResponse response = await client.PushAsync("Users/", user);
+            //User result = response.ResultAs<User>();
+            //Console.WriteLine(result);
+        } 
 
         // PUT api/test/5
         [HttpPut("{id}")]
@@ -89,9 +89,9 @@ namespace UBSafeAPI.Controllers
             User oldUser = response.ResultAs<User>();
 
 
-            var user = new User
-            {
-            };
+            //var user = new User
+            //{
+            //};
 
         }
 
