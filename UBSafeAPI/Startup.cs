@@ -34,7 +34,7 @@ namespace UBSafeAPI
         public void ConfigureServices(IServiceCollection services)
         {
             /*UNCOMMENT FOR AUTHENTICATION*/
-            //services.AddFirebaseAuthentication(Configuration["FirebaseAuthentication:https://securetoken.google.com/ubsafe-a816e"], Configuration["FirebaseAuthentication:ubsafe-a816e"]);
+            services.AddFirebaseAuthentication(Configuration["FirebaseAuthentication:https://securetoken.google.com/ubsafe-a816e"], Configuration["FirebaseAuthentication:ubsafe-a816e"]);
 
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
         }
@@ -43,7 +43,7 @@ namespace UBSafeAPI
         public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory)
         {
             /*UNCOMMENT FOR AUTHENTICATION*/
-            //app.UseAuthentication();
+            app.UseAuthentication();
 
             if (env.IsDevelopment())
             {

@@ -9,6 +9,7 @@ using UBSafeAPI.Data;
 using FireSharp.Config;
 using FireSharp.Interfaces;
 using FireSharp.Response;
+using Microsoft.AspNetCore.Authorization;
 
 namespace UBSafeAPI.Controllers
 {
@@ -33,6 +34,7 @@ namespace UBSafeAPI.Controllers
         
         // GET api/test
         [HttpGet]
+        [Authorize]
         public async Task<List<User>> Get()
         {
             client = new FireSharp.FirebaseClient(config);

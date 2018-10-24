@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace UBSafeAPI.Models
 {
-    public class Recommendation
+    public class CompanionSession
     {
         public int sessionID { get; set; }
         public User Traveller { get; set; }

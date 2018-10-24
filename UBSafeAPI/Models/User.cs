@@ -7,7 +7,22 @@ namespace UBSafeAPI.Models
 {
     public class User
     {
-        //public int UserID { get; set; }
+        public User(string userID, string userName, int age, string gender, int prefAgeMin, int prefAgeMax, float prefProximity, bool femaleCompanionsOkay, bool maleCompanionsOkay, bool otherCompanionsOkay, Location location)
+        {
+            UserID = userID;
+            UserName = userName;
+            Age = age;
+            Gender = gender;
+            PrefAgeMin = prefAgeMin;
+            PrefAgeMax = prefAgeMax;
+            PrefProximity = prefProximity;
+            FemaleCompanionsOkay = femaleCompanionsOkay;
+            MaleCompanionsOkay = maleCompanionsOkay;
+            OtherCompanionsOkay = otherCompanionsOkay;
+            Location = location;
+        }
+
+        public string UserID { get; set; }
         public string UserName { get; set; }
         public int Age { get; set; }
         public string Gender { get; set; }
@@ -19,18 +34,27 @@ namespace UBSafeAPI.Models
         public bool MaleCompanionsOkay { get; set; }
         public bool OtherCompanionsOkay { get; set; }
 
-        public User(string userName, int age, string gender, float lat, float lon, int prefAgeMin, int prefAgeMax, float prefProximity, bool femaleCompanionsOkay, bool maleCompanionsOkay, bool otherCompanionsOkay)
+
+
+        public UserProfile getProfile()
         {
-            this.UserName = userName;
-            this.Age = age;
-            this.Gender = gender;
-            this.Location = new Location(lat, lon, DateTime.Now);
-            this.PrefAgeMin = prefAgeMin;
-            this.PrefAgeMax = prefAgeMax;
-            this.PrefProximity = prefProximity;
-            this.FemaleCompanionsOkay = femaleCompanionsOkay;
-            this.MaleCompanionsOkay = maleCompanionsOkay;
-            this.OtherCompanionsOkay = otherCompanionsOkay;
+            return new UserProfile(this.UserID, this.UserName, this.Age, this.Gender);
         }
+    }
+
+    public class UserProfile
+    {
+        public UserProfile(string userID, string userName, int age, string gender)
+        {
+            UserID = userID;
+            UserName = userName;
+            Age = age;
+            Gender = gender;
+        }
+
+        public string UserID { get; set; }
+        public string UserName { get; set; }
+        public int Age { get; set; }
+        public string Gender { get; set; }
     }
 }

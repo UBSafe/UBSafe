@@ -4,13 +4,12 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json;
 using UBSafeAPI.Models;
 
-using FireSharp.Config;
-using FireSharp.Interfaces;
-using FireSharp.Response;
-using FireSharp;
+using Microsoft.AspNetCore.Authorization;
+using Firebase.Database;
+using Firebase.Database.Query;
+using GeoCoordinatePortable;
 
 namespace UBSafeAPI.Controllers
 {
@@ -18,79 +17,89 @@ namespace UBSafeAPI.Controllers
     [ApiController]
     public class RecommendationsController : ControllerBase
     {
-        IFirebaseConfig config = new FirebaseConfig
-        {
-            AuthSecret = "uieSwdqrzXirqrSoJk55xGitX7dsr85fkaps5Ita",
-            BasePath = "https://ubsafe-a816e.firebaseio.com/"
-        };
+        static string auth = "uieSwdqrzXirqrSoJk55xGitX7dsr85fkaps5Ita"; // app secret
+        FirebaseClient firebase = new FirebaseClient(
+          "https://ubsafe-a816e.firebaseio.com/",
+          new FirebaseOptions
+          {
+              AuthTokenAsyncFactory = () => Task.FromResult(auth)
+          });
 
-        IFirebaseClient client; 
         // GET: api/Recommendations
-        [HttpGet]
-        public List<User> Get(string userID)
+        [HttpGet("{userID}")]
+        public ActionResult Get([FromRoute] string userID)
         {
-            FirebaseResponse triggerLocationUpdate;
-            FirebaseResponse curUser;
-            FirebaseResponse response;
-            Preference preferences;
-            List<User> recommendations;
-            bool triggered;
-
-            client = new FireSharp.FirebaseClient(config);
-            if(client != null)
-            {
-                Console.WriteLine("Connection established.");
-            }
+            //Get current user's preferences for querying purposes
+            User traveller = firebase.Child("Users").Child(userID).OnceSingleAsync<User>().Result;
 
             /*
-             * Trigger location update in db - we do this before issuing other queries to give the 
+             * If the user has a proximity preference, trigger location update in db - 
+             * we do this before issuing other queries to give the 
              * clients time to update their locations in the db
              */
-            triggerLocationUpdate = client.Update("/", new UpdateTrigger { LocationUpdateTrigger = false } );
-            triggered = triggerLocationUpdate.ResultAs<UpdateTrigger>().LocationUpdateTrigger;
-            Console.WriteLine(triggered);
-
-            //Get current user's preferences for querying purposes
-            curUser = client.Get("Users/" + userID);
-            //preferences = curUser.ResultAs<User>().Preferences;
-
-            /*NOTE: ASSUMES THAT AGEMIN AND AGEMAX ARE DEFINED*/
-            //Query/filter by the current user's preferences
-            response = client.Get("Users/", QueryBuilder.New().OrderBy("Age"));
-            if (response.Body == "{}")
+            if (traveller.PrefProximity != -1)
             {
-                //TODO: return error response: No users found
-                return new List<User>();
+                firebase.Child("LocationUpdateTrigger").PutAsync(true);
             }
-            recommendations = response.ResultAs <List<User>>();
-            //TODO: additional filtering based on remaining preferences
 
-            return recommendations;
-        }
 
-        // GET: api/Recommendations/5
-        //[HttpGet("{id}", Name = "Get")]
-        //public string Get(int id)
-        //{
-        //    return "value";
-        //}
+            var returnedRecommendations = firebase
+                                    .Child("Users")
+                                    .OrderBy("Age")
+                                    .StartAt(traveller.PrefAgeMin)
+                                    .EndAt(traveller.PrefAgeMax)
+                                    .OnceSingleAsync<Dictionary<string, User>>()
+                                    .Result;
 
-        // POST: api/Recommendations
-        [HttpPost]
-        public void Post([FromBody] string value)
-        {
-        }
+            // remove current user from list so that they don't get themselves as a recommendation
+            returnedRecommendations.Remove(userID);
 
-        // PUT: api/Recommendations/5
-        [HttpPut("{id}")]
-        public void Put(int id, [FromBody] string value)
-        {
-        }
+            //we received a json object with userID's as keys and users as values - we only 
+            //need users now, so remove the keys
+            IEnumerable<User> recommendations = returnedRecommendations.Values.ToList();
 
-        // DELETE: api/ApiWithActions/5
-        [HttpDelete("{id}")]
-        public void Delete(int id)
-        {
+            if (!recommendations.Any())
+            {
+                return NotFound();
+            }
+
+            // remove current user from list so that they don't get themselves as a recommendation
+            recommendations = recommendations.Where(user => !user.Equals(traveller));
+
+            //filter by gender
+            if (!traveller.MaleCompanionsOkay) recommendations = recommendations.Where(user => user.Gender != "Male");
+            if (!traveller.FemaleCompanionsOkay) recommendations.Where(user => user.Gender != "Female");
+            if (!traveller.OtherCompanionsOkay) recommendations.Where(user => user.Gender != "Other");
+
+            //filter by location
+            if(traveller.PrefProximity != -1 && recommendations.Any())
+            {
+                /*
+                 * Location could be outdated, so discard users with locations
+                 * that have not been updated in the last 24 hours
+                 */
+                DateTime now = DateTime.Now;
+                recommendations = recommendations.Where(user => user.Location.LastUpdated > now.AddHours(-48) && user.Location.LastUpdated <= now);
+
+                var travellerLoc = new GeoCoordinate(traveller.Location.Lat, traveller.Location.Lon);
+                recommendations = recommendations.Where(user => travellerLoc.GetDistanceTo(new GeoCoordinate(user.Location.Lat, user.Location.Lon)) <= traveller.PrefProximity);
+
+                //reset location update trigger
+                firebase.Child("LocationUpdateTrigger").PutAsync(false);
+            }
+
+            if(!recommendations.Any())
+            {
+                return NotFound();
+            }
+
+            List<UserProfile> recommendedProfiles = new List<UserProfile>();
+            foreach(var user in recommendations)
+            {
+                recommendedProfiles.Add(user.getProfile()); 
+            }
+
+            return Ok(recommendedProfiles);
         }
     }
 }

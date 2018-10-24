@@ -4,12 +4,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using UBSafeAPI.Models;
-
-using FireSharp.Config;
-using FireSharp.Interfaces;
-using FireSharp.Response;
-using FireSharp;
+using Firebase.Database;
+using Firebase.Database.Query;
 
 namespace UBSafeAPI.Controllers
 {
@@ -17,43 +15,27 @@ namespace UBSafeAPI.Controllers
     [ApiController]
     public class UsersController : ControllerBase
     {
-        IFirebaseConfig config = new FirebaseConfig
-        {
-            AuthSecret = "uieSwdqrzXirqrSoJk55xGitX7dsr85fkaps5Ita",
-            BasePath = "https://ubsafe-a816e.firebaseio.com/"
-        };
-
-        IFirebaseClient client; 
+        static string auth = "uieSwdqrzXirqrSoJk55xGitX7dsr85fkaps5Ita"; // app secret
+        FirebaseClient firebase = new FirebaseClient(
+          "https://ubsafe-a816e.firebaseio.com/",
+          new FirebaseOptions
+          {
+              AuthTokenAsyncFactory = () => Task.FromResult(auth)
+          });
 
         // GET: api/Users
         [HttpGet]
-        public async Task<List<User>> Get()
+        public List<User> Get()
         {
-            client = new FireSharp.FirebaseClient(config);
-            if(client != null)
-            {
-                Console.WriteLine("Connection established.");
-            }
-
-            FirebaseResponse response = await client.GetAsync("Users/", QueryBuilder.New().OrderBy("Age"));
-            List<User> allUsers = response.ResultAs<List<User>>();
+            List<User> allUsers = firebase.Child("Users").OnceSingleAsync<Dictionary<string, User>>().Result.Values.ToList();
             return allUsers;
-
         }
 
         // GET: api/Users/5
-        [HttpGet("{id}", Name = "Get")]
-        public async Task<User> Get(string userID)
+        [HttpGet("{userID}", Name = "Get")]
+        public User Get(string userID)
         {
-            client = new FireSharp.FirebaseClient(config);
-            if(client != null)
-            {
-                Console.WriteLine("Connection established.");
-            }
-
-            FirebaseResponse response = await client.GetAsync("Users/" + userID);
-            User user = response.ResultAs<User>();
-
+            User user = firebase.Child("Users").Child(userID).OnceSingleAsync<User>().Result;
             return user;
         }
 
@@ -61,38 +43,50 @@ namespace UBSafeAPI.Controllers
         [HttpPost]
         public async void Post(string userID, string userName, int age, string gender, float lat, float lon, int prefAgeMin, int prefAgeMax, float prefProximity, bool femaleCompanionsOkay, bool maleCompanionsOkay, bool otherCompanionsOkay)
         {
-            client = new FireSharp.FirebaseClient(config);
-            if(client != null)
-            {
-                Console.WriteLine("Connection established.");
-            }
-
-            var user = new User(userName, age, gender, lat, lon, prefAgeMin, prefAgeMax, prefProximity, femaleCompanionsOkay, maleCompanionsOkay, otherCompanionsOkay);
-            SetResponse response = await client.SetAsync("Users/" + userID, user);
-            User result = response.ResultAs<User>();
-            Console.WriteLine(result);
+            User newUser = CreateTestUser(userID, userName, age, gender, prefAgeMin, prefAgeMax, prefProximity, femaleCompanionsOkay, maleCompanionsOkay, otherCompanionsOkay);
+            await firebase.Child("Users/" + userID).PutAsync(newUser);
         }
 
-        // PUT: api/Users/5
-        [HttpPut("{id}")]
-        public async void Put(string userID, string userName, int age, string gender, float lat, float lon, int prefAgeMin, int prefAgeMax, float prefProximity, bool femaleCompanionsOkay, bool maleCompanionsOkay, bool otherCompanionsOkay)
+        /* PUT: api/Users/5
+         * 
+         * API endpoint for updating a user's info in the db. 
+         * Note: Location cannot be updated through this endpoint. 
+         * All location updates should be done on the client. 
+         */
+        [HttpPut("{userID}")]
+        public void Put([FromRoute] string userID, [FromBody] Preference newPreferences)  
         {
-            client = new FireSharp.FirebaseClient(config);
-            if(client != null)
-            {
-                Console.WriteLine("Connection established.");
-            }
+            User oldUser = firebase.Child("Users").Child(userID).OnceSingleAsync<User>().Result;
 
-            FirebaseResponse response = await client.GetAsync("Users/" + userID);
-            User oldUser = response.ResultAs<User>();
+            var UserName = oldUser.UserName;
+            var Age = oldUser.Age;
+            var Gender = oldUser.Gender;
+            var PrefAgeMin = newPreferences.PrefAgeMin;
+            var PrefAgeMax = newPreferences.PrefAgeMax;
+            var PrefProximity = newPreferences.Proximity;
+            var FemaleCompanionsOkay = newPreferences.FemaleCompanionsOkay;
+            var MaleCompanionsOkay = newPreferences.MaleCompanionsOkay;
+            var OtherCompanionsOkay = newPreferences.OtherCompanionsOkay;
+            var Location = oldUser.Location;
 
-            var user = new User(userName, age, gender, lat, lon, prefAgeMin, prefAgeMax, prefProximity, femaleCompanionsOkay, maleCompanionsOkay, otherCompanionsOkay);
+            var updatedUser = new User(userID, UserName, Age, Gender, PrefAgeMin, PrefAgeMax, PrefProximity, FemaleCompanionsOkay, MaleCompanionsOkay, OtherCompanionsOkay, Location);
+
+            firebase.Child("Users").Child(userID).PutAsync(updatedUser);
         }
 
         // DELETE: api/ApiWithActions/5
-        [HttpDelete("{id}")]
-        public void Delete(int id)
+        [HttpDelete("{userID}")]
+        public async void Delete([FromRoute] string userID)
         {
+            await firebase
+              .Child("Users")
+              .Child(userID)
+              .DeleteAsync();
+        }
+
+        public static User CreateTestUser(string userID, string userName, int age, string gender, int prefAgeMin, int prefAgeMax, float prefProximity, bool femaleCompanionsOkay, bool maleCompanionsOkay, bool otherCompanionsOkay)
+        {
+            return new User(userID, userName, age, gender, prefAgeMin, prefAgeMax, prefProximity, femaleCompanionsOkay, maleCompanionsOkay, otherCompanionsOkay, new Location(-1, -1, DateTime.Now));
         }
     }
 }
