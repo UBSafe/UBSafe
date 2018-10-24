@@ -58,18 +58,15 @@ namespace UBSafeAPI.Controllers
         {
             User oldUser = firebase.Child("Users").Child(userID).OnceSingleAsync<User>().Result;
 
-            var UserName = oldUser.UserName;
-            var Age = oldUser.Age;
-            var Gender = oldUser.Gender;
-            var PrefAgeMin = newPreferences.PrefAgeMin;
-            var PrefAgeMax = newPreferences.PrefAgeMax;
-            var PrefProximity = newPreferences.Proximity;
-            var FemaleCompanionsOkay = newPreferences.FemaleCompanionsOkay;
-            var MaleCompanionsOkay = newPreferences.MaleCompanionsOkay;
-            var OtherCompanionsOkay = newPreferences.OtherCompanionsOkay;
-            var Location = oldUser.Location;
+            int PrefAgeMin = (newPreferences.PrefAgeMin == null)? oldUser.PrefAgeMin : (int) newPreferences.PrefAgeMin;
+            int PrefAgeMax = (newPreferences.PrefAgeMax == null)? oldUser.PrefAgeMax : (int) newPreferences.PrefAgeMax;
+            float PrefProximity = (newPreferences.Proximity == null)? oldUser.PrefProximity : (float) newPreferences.Proximity;
+            bool FemaleCompanionsOkay = (newPreferences.FemaleCompanionsOkay == null)? oldUser.FemaleCompanionsOkay : (bool) newPreferences.FemaleCompanionsOkay;
+            bool MaleCompanionsOkay = (newPreferences.MaleCompanionsOkay == null)? oldUser.MaleCompanionsOkay : (bool) newPreferences.MaleCompanionsOkay;
+            bool OtherCompanionsOkay = (newPreferences.OtherCompanionsOkay == null)? oldUser.OtherCompanionsOkay : (bool) newPreferences.OtherCompanionsOkay;
+            Location Location = oldUser.Location;
 
-            var updatedUser = new User(userID, UserName, Age, Gender, PrefAgeMin, PrefAgeMax, PrefProximity, FemaleCompanionsOkay, MaleCompanionsOkay, OtherCompanionsOkay, Location);
+            var updatedUser = new User(userID, oldUser.UserName, oldUser.Age, oldUser.Gender, PrefAgeMin, PrefAgeMax, PrefProximity, FemaleCompanionsOkay, MaleCompanionsOkay, OtherCompanionsOkay, Location);
 
             firebase.Child("Users").Child(userID).PutAsync(updatedUser);
         }

@@ -38,18 +38,18 @@ namespace UBSafeAPI.Models
 
         public UserProfile getProfile()
         {
-            return new UserProfile(this.UserID, this.UserName, this.Age, this.Gender);
+            return new UserProfile(this);
         }
     }
 
     public class UserProfile
     {
-        public UserProfile(string userID, string userName, int age, string gender)
+        public UserProfile(User user)
         {
-            UserID = userID;
-            UserName = userName;
-            Age = age;
-            Gender = gender;
+            UserID = user.UserID;
+            UserName = user.UserName;
+            Age = user.Age;
+            Gender = user.Gender;
         }
 
         public string UserID { get; set; }
