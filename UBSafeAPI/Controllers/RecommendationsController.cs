@@ -31,6 +31,10 @@ namespace UBSafeAPI.Controllers
         {
             //Get current user's preferences for querying purposes
             User traveller = firebase.Child("Users").Child(userID).OnceSingleAsync<User>().Result;
+            if(traveller == null)
+            {
+                return BadRequest(new { ErrorMessage = "User does not exist in the database."});
+            }
 
             /*
              * If the user has a proximity preference, trigger location update in db - 
@@ -60,7 +64,7 @@ namespace UBSafeAPI.Controllers
 
             if (!recommendations.Any())
             {
-                return NotFound();
+                return NotFound(new { ErrorMessage = "No matching Virtual Companions found."});
             }
 
             // remove current user from list so that they don't get themselves as a recommendation
@@ -68,8 +72,8 @@ namespace UBSafeAPI.Controllers
 
             //filter by gender
             if (!traveller.MaleCompanionsOkay) recommendations = recommendations.Where(user => user.Gender != "Male");
-            if (!traveller.FemaleCompanionsOkay) recommendations.Where(user => user.Gender != "Female");
-            if (!traveller.OtherCompanionsOkay) recommendations.Where(user => user.Gender != "Other");
+            if (!traveller.FemaleCompanionsOkay) recommendations = recommendations.Where(user => user.Gender != "Female");
+            if (!traveller.OtherCompanionsOkay) recommendations = recommendations.Where(user => user.Gender != "Other");
 
             //filter by location
             if(traveller.PrefProximity != -1 && recommendations.Any())
@@ -90,7 +94,7 @@ namespace UBSafeAPI.Controllers
 
             if(!recommendations.Any())
             {
-                return NotFound();
+                return NotFound(new { ErrorMessage = "No matching Virtual Companions found."});
             }
 
             List<UserProfile> recommendedProfiles = new List<UserProfile>();
