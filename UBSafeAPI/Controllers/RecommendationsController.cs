@@ -26,7 +26,7 @@ namespace UBSafeAPI.Controllers
           });
 
         // GET: api/Recommendations
-        [HttpGet("{userID}")]
+        [HttpGet("{userID}", Name = "GetRecommendations")]
         public ActionResult Get([FromRoute] string userID)
         {
             //Get current user's preferences for querying purposes
