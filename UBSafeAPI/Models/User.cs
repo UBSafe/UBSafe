@@ -36,7 +36,7 @@ namespace UBSafeAPI.Models
 
 
 
-        public UserProfile getProfile()
+        public UserProfile GetProfile()
         {
             return new UserProfile(this);
         }

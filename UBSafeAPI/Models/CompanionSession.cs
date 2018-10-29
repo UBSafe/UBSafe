@@ -7,7 +7,7 @@ namespace UBSafeAPI.Models
 {
     public class CompanionSession
     {
-        public int sessionID { get; set; }
+        public int SessionID { get; set; }
         public User Traveller { get; set; }
         public List<User> Watchers { get; set; }
         public Location Destination { get; set; }

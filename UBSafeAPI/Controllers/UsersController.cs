@@ -15,7 +15,7 @@ namespace UBSafeAPI.Controllers
     [ApiController]
     public class UsersController : ControllerBase
     {
-        static string auth = "uieSwdqrzXirqrSoJk55xGitX7dsr85fkaps5Ita"; // app secret
+        static readonly string auth = "uieSwdqrzXirqrSoJk55xGitX7dsr85fkaps5Ita"; // app secret
         FirebaseClient firebase = new FirebaseClient(
           "https://ubsafe-a816e.firebaseio.com/",
           new FirebaseOptions
@@ -25,26 +25,62 @@ namespace UBSafeAPI.Controllers
 
         // GET: api/Users
         [HttpGet]
-        public List<User> Get()
+        public ActionResult Get()
         {
-            List<User> allUsers = firebase.Child("Users").OnceSingleAsync<Dictionary<string, User>>().Result.Values.ToList();
-            return allUsers;
+            try
+            {
+                List<User> allUsers = firebase.Child("Users").OnceSingleAsync<Dictionary<string, User>>().Result.Values.ToList();
+                if(allUsers == null)
+                {
+                    return BadRequest(new { isSuccess = false, statusCode = 400, message = "Error: No users found in the database.", responseData = ""});
+                }
+                else
+                {
+                    return Ok(new { isSuccess = true, statusCode = 200, message = "", responseData = allUsers});
+                }
+            }
+            catch(Exception e)
+            {
+                return StatusCode(504, new { isSuccess = false, statusCode = 504, message = e.Message, responseData = ""});
+            }
         }
 
         // GET: api/Users/5
         [HttpGet("{userID}", Name = "Get")]
-        public User Get(string userID)
+        public ActionResult Get(string userID)
         {
-            User user = firebase.Child("Users").Child(userID).OnceSingleAsync<User>().Result;
-            return user;
+            try
+            {
+                User user = firebase.Child("Users").Child(userID).OnceSingleAsync<User>().Result;
+                if(user == null)
+                {
+                    return BadRequest(new { isSuccess = false, statusCode = 400, message = "Error: User does not exist in the database.", responseData = ""});
+                }
+                else
+                {
+                    return Ok(new { isSuccess = true, statusCode = 200, message = "", responseData = user});
+                }
+            }
+            catch(Exception e)
+            {
+                return StatusCode(504, new { isSuccess = false, statusCode = 504, message = e.Message, responseData = ""});
+            }
         }
 
         // POST: api/Users
         [HttpPost]
-        public async void Post(string userID, string userName, int age, string gender, float lat, float lon, int prefAgeMin, int prefAgeMax, float prefProximity, bool femaleCompanionsOkay, bool maleCompanionsOkay, bool otherCompanionsOkay)
+        public ActionResult Post( [FromBody] User user)
         {
-            User newUser = CreateTestUser(userID, userName, age, gender, prefAgeMin, prefAgeMax, prefProximity, femaleCompanionsOkay, maleCompanionsOkay, otherCompanionsOkay);
-            await firebase.Child("Users/" + userID).PutAsync(newUser);
+            var response = firebase.Child("Users/" + user.UserID).PutAsync(user);
+            if (response.IsCompletedSuccessfully)
+            {
+                return Ok(new { isSuccess = true, statusCode = 200, message = "", responseData = user});
+            }
+            else
+            {
+                return StatusCode(504, new { isSuccess = false, statusCode = 504, message = "Failed to create user.", responseData = user});
+
+            }
         }
 
         /* PUT: api/Users/5
@@ -54,36 +90,48 @@ namespace UBSafeAPI.Controllers
          * All location updates should be done on the client. 
          */
         [HttpPut("{userID}")]
-        public void Put([FromRoute] string userID, [FromBody] Preference newPreferences)  
+        public ActionResult Put([FromRoute] string userID, [FromBody] Preference newPreferences)  
         {
-            User oldUser = firebase.Child("Users").Child(userID).OnceSingleAsync<User>().Result;
+            User oldUser;
+            int PrefAgeMin, PrefAgeMax;
+            float PrefProximity;
+            bool FemaleCompanionsOkay, MaleCompanionsOkay, OtherCompanionsOkay;
 
-            int PrefAgeMin = (newPreferences.PrefAgeMin == null)? oldUser.PrefAgeMin : (int) newPreferences.PrefAgeMin;
-            int PrefAgeMax = (newPreferences.PrefAgeMax == null)? oldUser.PrefAgeMax : (int) newPreferences.PrefAgeMax;
-            float PrefProximity = (newPreferences.Proximity == null)? oldUser.PrefProximity : (float) newPreferences.Proximity;
-            bool FemaleCompanionsOkay = (newPreferences.FemaleCompanionsOkay == null)? oldUser.FemaleCompanionsOkay : (bool) newPreferences.FemaleCompanionsOkay;
-            bool MaleCompanionsOkay = (newPreferences.MaleCompanionsOkay == null)? oldUser.MaleCompanionsOkay : (bool) newPreferences.MaleCompanionsOkay;
-            bool OtherCompanionsOkay = (newPreferences.OtherCompanionsOkay == null)? oldUser.OtherCompanionsOkay : (bool) newPreferences.OtherCompanionsOkay;
-            Location Location = oldUser.Location;
+            try
+            {
+                oldUser = firebase.Child("Users").Child(userID).OnceSingleAsync<User>().Result;
 
-            var updatedUser = new User(userID, oldUser.UserName, oldUser.Age, oldUser.Gender, PrefAgeMin, PrefAgeMax, PrefProximity, FemaleCompanionsOkay, MaleCompanionsOkay, OtherCompanionsOkay, Location);
+                PrefAgeMin = (newPreferences.PrefAgeMin == null)? oldUser.PrefAgeMin : (int) newPreferences.PrefAgeMin;
+                PrefAgeMax = (newPreferences.PrefAgeMax == null)? oldUser.PrefAgeMax : (int) newPreferences.PrefAgeMax;
+                PrefProximity = (newPreferences.Proximity == null)? oldUser.PrefProximity : (float) newPreferences.Proximity;
+                FemaleCompanionsOkay = (newPreferences.FemaleCompanionsOkay == null)? oldUser.FemaleCompanionsOkay : (bool) newPreferences.FemaleCompanionsOkay;
+                MaleCompanionsOkay = (newPreferences.MaleCompanionsOkay == null)? oldUser.MaleCompanionsOkay : (bool) newPreferences.MaleCompanionsOkay;
+                OtherCompanionsOkay = (newPreferences.OtherCompanionsOkay == null)? oldUser.OtherCompanionsOkay : (bool) newPreferences.OtherCompanionsOkay;
+                Location Location = oldUser.Location;
 
-            firebase.Child("Users").Child(userID).PutAsync(updatedUser);
+                var updatedUser = new User(userID, oldUser.UserName, oldUser.Age, oldUser.Gender, PrefAgeMin, PrefAgeMax, PrefProximity, FemaleCompanionsOkay, MaleCompanionsOkay, OtherCompanionsOkay, Location);
+                firebase.Child("Users").Child(userID).PutAsync(updatedUser);
+            return Ok(new { isSuccess = true, statusCode = 200, message = "", responseData = updatedUser});
+            }
+            catch(Exception e)
+            {
+                return StatusCode(504, new { isSuccess = false, statusCode = 504, message = "Failed to create user.", responseData = e.Message});
+            }
         }
 
         // DELETE: api/ApiWithActions/5
         [HttpDelete("{userID}")]
-        public async void Delete([FromRoute] string userID)
+        public ActionResult Delete([FromRoute] string userID)
         {
-            await firebase
-              .Child("Users")
-              .Child(userID)
-              .DeleteAsync();
-        }
-
-        public static User CreateTestUser(string userID, string userName, int age, string gender, int prefAgeMin, int prefAgeMax, float prefProximity, bool femaleCompanionsOkay, bool maleCompanionsOkay, bool otherCompanionsOkay)
-        {
-            return new User(userID, userName, age, gender, prefAgeMin, prefAgeMax, prefProximity, femaleCompanionsOkay, maleCompanionsOkay, otherCompanionsOkay, new Location(-1, -1, DateTime.Now));
+            try
+            {
+               var response = firebase.Child("Users").Child(userID).DeleteAsync();
+               return Ok(new { isSuccess = true, statusCode = 200, message = "", responseData = "Successfully deleted user" + userID});
+            }
+            catch(Exception e)
+            {
+                return StatusCode(504, new { isSuccess = false, statusCode = 504, message = "Failed to delete user.", responseData = e.Message});
+            }
         }
     }
 }

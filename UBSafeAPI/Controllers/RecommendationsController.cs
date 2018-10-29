@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using UBSafeAPI.Models;
+using UBSafeAPI.GeoQuerying;
 
 using Microsoft.AspNetCore.Authorization;
 using Firebase.Database;
@@ -17,9 +17,11 @@ namespace UBSafeAPI.Controllers
     [ApiController]
     public class RecommendationsController : ControllerBase
     {
-        static string auth = "uieSwdqrzXirqrSoJk55xGitX7dsr85fkaps5Ita"; // app secret
+        static readonly string auth = "uieSwdqrzXirqrSoJk55xGitX7dsr85fkaps5Ita";
+        static readonly string dbUrl = "https://ubsafe-a816e.firebaseio.com/";
+
         FirebaseClient firebase = new FirebaseClient(
-          "https://ubsafe-a816e.firebaseio.com/",
+          dbUrl,
           new FirebaseOptions
           {
               AuthTokenAsyncFactory = () => Task.FromResult(auth)
@@ -29,81 +31,92 @@ namespace UBSafeAPI.Controllers
         [HttpGet("{userID}", Name = "GetRecommendations")]
         public ActionResult Get([FromRoute] string userID)
         {
-            //Get current user's preferences for querying purposes
-            User traveller = firebase.Child("Users").Child(userID).OnceSingleAsync<User>().Result;
-            if(traveller == null)
+            User traveller;
+            IEnumerable<User> recommendations;
+            List<UserProfile> recommendedProfiles = new List<UserProfile>();
+
+            try
             {
-                return BadRequest(new { ErrorMessage = "User does not exist in the database."});
-            }
+                //Get current user's preferences for querying + filtering purposes
+                traveller = firebase
+                            .Child("Users")
+                            .Child(userID)
+                            .OnceSingleAsync<User>()
+                            .Result;
 
-            /*
-             * If the user has a proximity preference, trigger location update in db - 
-             * we do this before issuing other queries to give the 
-             * clients time to update their locations in the db
-             */
-            if (traveller.PrefProximity != -1)
-            {
-                firebase.Child("LocationUpdateTrigger").PutAsync(true);
-            }
+                if(traveller == null)
+                {
+                    return BadRequest(new { isSuccess = false, statusCode = 400, errorMessage = "User does not exist in the database."});
+                }
 
-
-            var returnedRecommendations = firebase
-                                    .Child("Users")
-                                    .OrderBy("Age")
-                                    .StartAt(traveller.PrefAgeMin)
-                                    .EndAt(traveller.PrefAgeMax)
-                                    .OnceSingleAsync<Dictionary<string, User>>()
-                                    .Result;
-
-            // remove current user from list so that they don't get themselves as a recommendation
-            returnedRecommendations.Remove(userID);
-
-            //we received a json object with userID's as keys and users as values - we only 
-            //need users now, so remove the keys
-            IEnumerable<User> recommendations = returnedRecommendations.Values.ToList();
-
-            if (!recommendations.Any())
-            {
-                return NotFound(new { ErrorMessage = "No matching Virtual Companions found."});
-            }
-
-            // remove current user from list so that they don't get themselves as a recommendation
-            recommendations = recommendations.Where(user => !user.Equals(traveller));
-
-            //filter by gender
-            if (!traveller.MaleCompanionsOkay) recommendations = recommendations.Where(user => user.Gender != "Male");
-            if (!traveller.FemaleCompanionsOkay) recommendations = recommendations.Where(user => user.Gender != "Female");
-            if (!traveller.OtherCompanionsOkay) recommendations = recommendations.Where(user => user.Gender != "Other");
-
-            //filter by location
-            if(traveller.PrefProximity != -1 && recommendations.Any())
-            {
                 /*
-                 * Location could be outdated, so discard users with locations
-                 * that have not been updated in the last 24 hours
+                 * trigger location update in db - 
+                 * we do this before issuing other queries to give the 
+                 * clients time to update their locations in the db
                  */
-                DateTime now = DateTime.Now;
-                recommendations = recommendations.Where(user => user.Location.LastUpdated > now.AddHours(-48) && user.Location.LastUpdated <= now);
+                firebase.Child("LocationUpdateTrigger").PutAsync(true);
 
-                var travellerLoc = new GeoCoordinate(traveller.Location.Lat, traveller.Location.Lon);
-                recommendations = recommendations.Where(user => travellerLoc.GetDistanceTo(new GeoCoordinate(user.Location.Lat, user.Location.Lon)) <= traveller.PrefProximity);
+                GeoQuery geoQuery = new GeoQuery(traveller.Location.Lat, traveller.Location.Lon, traveller.PrefProximity);
+
+                var returnedRecommendations = firebase
+                                            .Child("Users")
+                                            .OrderBy("Geohash")
+                                            .StartAt(geoQuery.LowerGeoHash)
+                                            .EndAt(geoQuery.UpperGeoHash)
+                                            .LimitToFirst(100)
+                                            .OnceSingleAsync<Dictionary<string, User>>()
+                                            .Result;
+
+                // remove current user from list so that they don't get themselves as a recommendation
+                returnedRecommendations.Remove(userID);
+
+                //we received a json object with userID's as keys and users as values - we only 
+                //need users now, so remove the keys
+                recommendations = returnedRecommendations.Values.ToList();
+
+                if (!recommendations.Any())
+                {
+                    return NotFound(new { isSuccess = false, statusCode = 400, message = "No matching Virtual Companions found/available.", responseData = recommendedProfiles});
+                }
+
+                //filter based on the user's remaining preferences  - note that this is done on 
+                //the server instead of in the initial query because the 
+                //firebase realtime database does not support compounded queries
+                recommendations = recommendations.Where(user => user.Age >= traveller.PrefAgeMin && user.Age <= traveller.PrefAgeMax);
+
+                if (!traveller.MaleCompanionsOkay)
+                {
+                    recommendations = recommendations.Where(user => user.Gender != "Male");
+                }
+                if (!traveller.FemaleCompanionsOkay)
+                {
+                    recommendations = recommendations.Where(user => user.Gender != "Female");
+                }
+                if (!traveller.OtherCompanionsOkay)
+                {
+                    recommendations = recommendations.Where(user => user.Gender != "Other");
+                }
 
                 //reset location update trigger
                 firebase.Child("LocationUpdateTrigger").PutAsync(false);
-            }
 
-            if(!recommendations.Any())
+                if(!recommendations.Any())
+                {
+                    return NotFound(new { isSuccess = false, statusCode = 400, message = "No matching Virtual Companions found.", responseData = recommendedProfiles});
+                }
+
+                foreach(var user in recommendations)
+                {
+                    recommendedProfiles.Add(user.GetProfile()); 
+                }
+
+                return Ok(new { isSuccess = true, statusCode = 200, message = "", responseData = recommendedProfiles});
+                }
+
+            catch(Exception e)
             {
-                return NotFound(new { ErrorMessage = "No matching Virtual Companions found."});
+                return StatusCode(504, new { isSuccess = false, statusCode = 504, message = e.Message, responseData = ""});
             }
-
-            List<UserProfile> recommendedProfiles = new List<UserProfile>();
-            foreach(var user in recommendations)
-            {
-                recommendedProfiles.Add(user.getProfile()); 
-            }
-
-            return Ok(recommendedProfiles);
         }
     }
 }
