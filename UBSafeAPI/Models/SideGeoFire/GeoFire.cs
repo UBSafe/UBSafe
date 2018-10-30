@@ -14,25 +14,8 @@
             // Validate location
             ValidateLocation(latitude, longitude);
 
-            // Generate a new geohash
-            var geohash = Geohash.Encode(latitude, longitude);
-
-            // Build location object
-            return BuildLocationWithPriority(latitude, longitude, geohash);
-        }
-
-        /// <summary>
-        /// Builds a firebase location priority object
-        /// </summary>
-        /// <param name="latitude">latitude of location</param>
-        /// <param name="longitude">longitude of location</param>
-        /// <param name="geohash">An encoded geohash object</param>
-        /// <param name="includePriority">When set to true, the priority is set in the object. Legacy</param>
-        /// <returns></returns>
-        private static string BuildLocationWithPriority(double latitude, double longitude, string geohash, bool includePriority = false)
-        {
-            return
-                $"{{'g': '{geohash}', 'l': {{'0': {latitude}, '1': {longitude}}}{(includePriority ? ", '.priority': '{0}'}" : "")}}}";
+            // Generate a new geohash and return it
+            return Geohash.Encode(latitude, longitude);
         }
 
         /// <summary>

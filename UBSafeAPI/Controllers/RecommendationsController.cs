@@ -74,17 +74,17 @@ namespace UBSafeAPI.Controllers
                 //reset location update trigger
                 Firebase.Child("LocationUpdateTrigger").PutAsync(false);
 
+                if(returnedRecommendations == null)
+                {
+                    return NotFound(new { statusCode = 400, errorMessage = "No matching Virtual Companions found/available.", responseData = recommendedProfiles});
+                }
+
                 // remove current user from list so that they don't get themselves as a recommendation
                 returnedRecommendations.Remove(userID);
 
                 //we received a json object with userID's as keys and users as values - we only 
                 //need users now, so remove the keys
                 recommendations = returnedRecommendations.Values.ToList();
-
-                if (!recommendations.Any())
-                {
-                    return NotFound(new { statusCode = 400, errorMessage = "No matching Virtual Companions found/available.", responseData = recommendedProfiles});
-                }
 
                 /* filter based on the user's remaining preferences  - note that this is done on 
                  * the server instead of in the initial query because the 
