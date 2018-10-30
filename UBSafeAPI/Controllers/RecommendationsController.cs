@@ -51,12 +51,11 @@ namespace UBSafeAPI.Controllers
 
                 if(traveller == null)
                 {
+                    Firebase.Child("LocationUpdateTrigger").PutAsync(false);
                     return BadRequest(new { statusCode = 400, errorMessage = "User does not exist in the database.", responseData = ""});
                 }
 
-
                 GeoQuery geoQuery = new GeoQuery(traveller.Location.Lat, traveller.Location.Lon, traveller.Preferences.Proximity);
-
 
                 /*
                  * Pull the first 100 users that are within the user's 
@@ -105,13 +104,12 @@ namespace UBSafeAPI.Controllers
                     recommendations = recommendations.Where(user => user.Gender != "Other");
                 }
 
-                recommendations = recommendations.OrderBy(user => user.Location.LastUpdated);
-
                 if(!recommendations.Any())
                 {
                     return NotFound(new { statusCode = 400, errorMessage = "No matching Virtual Companions found.", responseData = recommendedProfiles});
                 }
 
+                recommendations = recommendations.OrderBy(user => user.Location.LastUpdated);
                 foreach(var user in recommendations)
                 {
                     recommendedProfiles.Add(user.GetProfile()); 
