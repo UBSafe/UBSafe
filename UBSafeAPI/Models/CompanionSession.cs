@@ -13,8 +13,4 @@ namespace UBSafeAPI.Models
         public Location Destination { get; set; }
         public DateTime LastUpdated { get; set; }
     }
-    public class UpdateTrigger
-    {
-        public bool LocationUpdateTrigger { get; set; } 
-    }
 }

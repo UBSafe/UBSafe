@@ -1,7 +1,6 @@
-﻿
-using System;
+﻿using System;
 
-namespace SideGeoFire
+namespace UBSafeAPI.Models.SideGeoFire
 {
     public class GeoFireException : Exception
     {

@@ -1,58 +1,57 @@
 ﻿using System;
-using SideGeoFire;
 
-namespace UBSafeAPI.GeoQuerying
+namespace UBSafeAPI.Models.SideGeoFire 
 {
 
     public class GeoQuery
     {
 
-        public string LowerGeoHash;
-        public string UpperGeoHash;
+        public readonly string lowerGeoHash;
+        public readonly string upperGeoHash;
 
-        private double CenterLat;
-        private double CenterLon;
-        private double Radius;
+        private readonly double centerLat;
+        private readonly double centerLon;
+        private readonly double radius;
 
-        private double SWCornerLat;
-        private double SWCornerLon;
-        private double NECornerLat;
-        private double NECornerLon;
+        private double swCornerLat;
+        private double swCornerLon;
+        private double neCornerLat;
+        private double neCornerLon;
 
         public GeoQuery(double centerLat, double centerLon, double proximity)
         {
-            this.CenterLat = centerLat;
-            this.CenterLon = centerLon;
-            this.Radius = proximity;
+            this.centerLat = centerLat;
+            this.centerLon = centerLon;
+            this.radius = proximity;
 
             SetBoundingBoxCoordinates();
-            this.LowerGeoHash = GeoFire.BuildGeoHash(SWCornerLat, SWCornerLon);
-            this.UpperGeoHash = GeoFire.BuildGeoHash(NECornerLat, NECornerLon);
+            this.lowerGeoHash = GeoFire.BuildGeoHash(swCornerLat, swCornerLon);
+            this.upperGeoHash = GeoFire.BuildGeoHash(neCornerLat, neCornerLon);
         }
 
         private void SetBoundingBoxCoordinates()
         {
             const double KM_PER_DEGREE_LATITUDE = 110.574;
-            double latDegrees = this.Radius / KM_PER_DEGREE_LATITUDE;
-            double latitudeNorth = Math.Min(90, this.CenterLat + latDegrees);
-            double latitudeSouth = Math.Max(-90, this.CenterLat - latDegrees);
+            double latDegrees = this.radius / KM_PER_DEGREE_LATITUDE;
+            double latitudeNorth = Math.Min(90, this.centerLat + latDegrees);
+            double latitudeSouth = Math.Max(-90, this.centerLat - latDegrees);
             // calculate longitude based on current latitude
-            double longDegsNorth = MetersToLongitudeDegrees(this.Radius, latitudeNorth);
-            double longDegsSouth = MetersToLongitudeDegrees(this.Radius, latitudeSouth);
+            double longDegsNorth = MetersToLongitudeDegrees(this.radius, latitudeNorth);
+            double longDegsSouth = MetersToLongitudeDegrees(this.radius, latitudeSouth);
             double longDegs = Math.Max(longDegsNorth, longDegsSouth);
 
-            this.SWCornerLat = latitudeSouth;
-            this.SWCornerLon = WrapLongitude(this.CenterLon - longDegs);
-            this.NECornerLat = latitudeNorth;
-            this.NECornerLon = WrapLongitude(this.CenterLon + longDegs); 
+            this.swCornerLat = latitudeSouth;
+            this.swCornerLon = WrapLongitude(this.centerLon - longDegs);
+            this.neCornerLat = latitudeNorth;
+            this.neCornerLon = WrapLongitude(this.centerLon + longDegs); 
         }
 
-        private double DegreesToRadians(double degrees)
+        private static double DegreesToRadians(double degrees)
         {
             return (degrees * Math.PI) / 180;
         }
 
-        private double MetersToLongitudeDegrees(double distance, double latitude)
+        private static double MetersToLongitudeDegrees(double distance, double latitude)
         {
             const double EARTH_EQ_RADIUS = 6378137.0;
             const double E2 = 0.00669447819799; //magic number taken from the GeoFire library
@@ -79,7 +78,7 @@ namespace UBSafeAPI.GeoQuerying
         * @param {number} longitude The longitude to wrap.
         * @return {number} longitude The resulting longitude.
         */
-        public double WrapLongitude(double longitude)
+        public static double WrapLongitude(double longitude)
         {
             if (longitude <= 180 && longitude >= -180)
             {

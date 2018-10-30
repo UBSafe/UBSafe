@@ -1,4 +1,4 @@
-﻿namespace SideGeoFire
+﻿namespace UBSafeAPI.Models.SideGeoFire
 {
     public static class GeoFire
     {

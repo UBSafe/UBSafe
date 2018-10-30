@@ -1,13 +1,11 @@
-﻿namespace SideGeoFire
+﻿namespace UBSafeAPI.Models.SideGeoFire
 {
     public static class Geohash
     {
-        private const string Base32 = "0123456789bcdefghjkmnpqrstuvwxyz";
+        private const string BASE_32 = "0123456789bcdefghjkmnpqrstuvwxyz";
         private static readonly int[] Bits = { 16, 8, 4, 2, 1 };
 
-        /// <summary>
-        ///     Implimentation of GeoFire's encodeGeohash function
-        /// </summary>
+        //Implimentation of GeoFire's encodeGeohash function
         public static string Encode(double latitude, double longitude, int precision = 10)
         {
             // Local variables
@@ -21,14 +19,15 @@
             double[] longitudeRange = { -180.0, 180.0 };
 
             // Ensure we have a valid precision
-            if (precision < 1 || precision > 20) precision = 10;
+            if (precision < 1 || precision > 20)
+            {
+                 precision = 10;
+            }
 
             // Loop while our geohash length is less than our precision
             while (geohash.Length < precision)
             {
-                // Check if we are even or odd
-                var mid = even ? (longitudeRange[0] + longitudeRange[1]) / 2 : (latitudeRange[0] + latitudeRange[1]) / 2;
-
+                var mid = (even) ? (longitudeRange[0] + longitudeRange[1]) / 2 : (latitudeRange[0] + latitudeRange[1]) / 2;
                 if (even)
                 {
                     if (longitude > mid)
@@ -53,19 +52,18 @@
                         latitudeRange[1] = mid;
                     }
                 }
-
-                // Flip bit
                 even = !even;
-
-                if (bits < 4) bits++;
+                if (bits < 4)
+                {
+                    bits++;
+                } 
                 else
                 {
-                    geohash += Base32[hashValue];
+                    geohash += BASE_32[hashValue];
                     bits = 0;
                     hashValue = 0;
                 }
             }
-
             return geohash;
         }
     }
