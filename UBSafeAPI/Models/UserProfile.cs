@@ -3,10 +3,10 @@ namespace UBSafeAPI.Models
 {
     public class UserProfile
     {
-        private string UserID { get; set; }
-        private string UserName { get; set; }
-        private int Age { get; set; }
-        private string Gender { get; set; }
+        public string UserID { get; set; }
+        public string UserName { get; set; }
+        public int Age { get; set; }
+        public string Gender { get; set; }
 
         public UserProfile(User user)
         {
