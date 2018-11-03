@@ -4,15 +4,16 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using UBSafeAPI.Models;
-using UBSafeAPI.Models.SideGeoFire;
 
 using Microsoft.AspNetCore.Authorization;
 using Firebase.Database;
 using Firebase.Database.Query;
+using NGeoHash;
+using Geolocation;
 
 namespace UBSafeAPI.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/recommendations")]
     [ApiController]
     public class RecommendationsController : ControllerBase
     {
@@ -55,7 +56,10 @@ namespace UBSafeAPI.Controllers
                     return BadRequest(new { statusCode = 400, errorMessage = "User does not exist in the database.", responseData = ""});
                 }
 
-                GeoQuery geoQuery = new GeoQuery(traveller.Location.Lat, traveller.Location.Lon, traveller.Preferences.Proximity);
+                CoordinateBoundaries boundaries = new CoordinateBoundaries(traveller.Location.Lat, traveller.Location.Lon, traveller.Preferences.Proximity, DistanceUnit.Kilometers); ;
+                var lowerHash = GeoHash.Encode(boundaries.MinLatitude, boundaries.MinLongitude); ;
+                var upperHash = GeoHash.Encode(boundaries.MaxLatitude, boundaries.MaxLongitude); ;
+
 
                 /*
                  * Pull the first 100 users that are within the user's 
@@ -64,8 +68,8 @@ namespace UBSafeAPI.Controllers
                 var returnedRecommendations = Firebase
                                             .Child("Users")
                                             .OrderBy("Geohash")
-                                            .StartAt(geoQuery.lowerGeoHash)
-                                            .EndAt(geoQuery.upperGeoHash)
+                                            .StartAt(lowerHash)
+                                            .EndAt(upperHash)
                                             .LimitToFirst(100)
                                             .OnceSingleAsync<Dictionary<string, User>>()
                                             .Result;
@@ -85,7 +89,8 @@ namespace UBSafeAPI.Controllers
                 //need users now, so remove the keys
                 recommendations = returnedRecommendations.Values.ToList();
 
-                /* filter based on the user's remaining preferences  - note that this is done on 
+                /* 
+                 * filter based on the user's remaining preferences  - note that this is done on 
                  * the server instead of in the initial query because the 
                  * Firebase realtime database does not support compounded queries
                  */
